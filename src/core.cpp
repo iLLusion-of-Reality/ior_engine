@@ -16,7 +16,7 @@ namespace ior_engine {
     }
 
     bool core::init() {
-        if(!SDL_CreateWindowAndRenderer("IOR Engine", 800, 600, 0, &m_window, &m_renderer)) {
+        if(!SDL_CreateWindowAndRenderer("IOR Engine", 800, 600, SDL_WINDOW_RESIZABLE, &m_window, &m_renderer)) {
             spdlog::critical("Failed to create window and renderer: %s", SDL_GetError());
             return false;
         }
