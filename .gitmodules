@@ -1,0 +1,12 @@
+[submodule "thirdparty/cglm"]
+	path = thirdparty/cglm
+	url = git@github.com:recp/cglm.git
+[submodule "thirdparty/SDL"]
+	path = thirdparty/SDL
+	url = git@github.com:libsdl-org/SDL.git
+[submodule "thirdparty/spdlog"]
+	path = thirdparty/spdlog
+	url = git@github.com:gabime/spdlog.git
+[submodule "thirdparty/flecs"]
+	path = thirdparty/flecs
+	url = git@github.com:SanderMertens/flecs.git
