@@ -15,6 +15,14 @@ add_subdirectory(thirdparty/SDL)
 add_subdirectory(thirdparty/spdlog)
 add_subdirectory(thirdparty/flecs)
 
-add_executable(ior_engine src/core.cpp)
+set(SOURCES
+    src/core.cpp
+)
+
+set(HEADERS
+    src/core.h
+)
+
+add_executable(ior_engine ${SOURCES} ${HEADERS})
 
 target_link_libraries(ior_engine PRIVATE cglm SDL3::SDL3 spdlog::spdlog flecs::flecs)
