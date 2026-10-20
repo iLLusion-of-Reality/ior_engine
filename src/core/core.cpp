@@ -34,6 +34,8 @@ namespace ior_engine {
     }
 
     void core::update() {
+        m_ecs.update();
+
         SDL_SetRenderDrawColor(m_renderer, 20, 20, 35, 255);
         SDL_RenderClear(m_renderer);
         SDL_RenderPresent(m_renderer);
