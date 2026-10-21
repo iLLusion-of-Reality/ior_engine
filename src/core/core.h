@@ -1,5 +1,6 @@
 #pragma once
-#include "ecs.h"
+#include "ecs/ecs.h"
+#include "renderer/renderer.h"
 #include "game_library.h"
 
 #include <SDL3/SDL.h>
@@ -23,7 +24,7 @@ private:
     game_library m_game{m_ecs.world()};
     std::string m_reload_error;
     SDL_Window* m_window = nullptr;
-    SDL_Renderer* m_renderer = nullptr;
+    std::unique_ptr<renderer> m_renderer;
 };
 
 } // namespace ior_engine

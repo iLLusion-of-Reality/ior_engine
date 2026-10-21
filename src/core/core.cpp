@@ -6,27 +6,31 @@
 namespace ior_engine {
     core::~core() {
         m_game.unload();
-        if (m_renderer) {
-            SDL_DestroyRenderer(m_renderer);
-        }
+
+        m_renderer.reset();
+
         if (m_window) {
             SDL_DestroyWindow(m_window);
         }
         
-        spdlog::info("Core destroyed.");
+        spdlog::info("core destroyed.");
     }
 
     bool core::init(const std::filesystem::path& game_path) {
-        if(!SDL_CreateWindowAndRenderer("IOR Engine", 800, 600, SDL_WINDOW_RESIZABLE, &m_window, &m_renderer)) {
-            spdlog::critical("Failed to create window and renderer: {}", SDL_GetError());
+        m_window = SDL_CreateWindow("IOR Engine", 800, 600, SDL_WINDOW_RESIZABLE);
+        if(!m_window) {
+            spdlog::critical("failed to create window: {}", SDL_GetError());
             return false;
         }
+        
+        m_renderer = std::make_unique<renderer>(m_window);
+
         if (!game_path.empty() && !m_game.load(game_path)) {
-            spdlog::critical("Game load failed: {}", m_game.error());
+            spdlog::critical("game load failed: {}", m_game.error());
             return false;
         }
         if (m_game.loaded()) {
-            spdlog::info("Game loaded: {} (hot reload enabled)", game_path.string());
+            spdlog::info("game loaded: {} (hot reload enabled)", game_path.string());
         }
         return true;
     }
@@ -34,7 +38,7 @@ namespace ior_engine {
     void core::handle_event(const SDL_Event& event) {
         if(event.type == SDL_EVENT_KEY_DOWN) {
             if(event.key.key == SDLK_ESCAPE) {
-                spdlog::info("Escape key pressed. Exiting...");
+                spdlog::info("escape key pressed. exiting...");
                 SDL_Event quit{};
                 quit.type = SDL_EVENT_QUIT;
                 SDL_PushEvent(&quit);
@@ -46,16 +50,17 @@ namespace ior_engine {
         if (!m_game.poll()) {
             if (m_reload_error != m_game.error()) {
                 m_reload_error = m_game.error();
-                spdlog::error("Game reload failed: {}", m_reload_error);
+                spdlog::error("game reload failed: {}", m_reload_error);
             }
         } else if (m_game.error().empty()) {
             m_reload_error.clear();
         }
         m_ecs.update();
 
-        SDL_SetRenderDrawColor(m_renderer, 20, 20, 35, 255);
-        SDL_RenderClear(m_renderer);
-        SDL_RenderPresent(m_renderer);
+        m_renderer->render();
+        // SDL_SetRenderDrawColor(m_renderer, 20, 20, 35, 255);
+        // SDL_RenderClear(m_renderer);
+        // SDL_RenderPresent(m_renderer);
     }
 } // namespace ior_engine
 
