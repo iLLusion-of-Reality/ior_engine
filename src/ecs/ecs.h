@@ -16,6 +16,8 @@ public:
     ecs(const ecs&) = delete;
     ecs& operator=(const ecs&) = delete;
 
+    void register_components();
+
     // A zero delta lets Flecs measure elapsed time itself.
     bool update(float delta_time = 0.0f);
 
