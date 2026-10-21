@@ -5,6 +5,7 @@
 
 namespace ior_engine {
     core::~core() {
+        m_game.unload();
         if (m_renderer) {
             SDL_DestroyRenderer(m_renderer);
         }
@@ -15,10 +16,17 @@ namespace ior_engine {
         spdlog::info("Core destroyed.");
     }
 
-    bool core::init() {
+    bool core::init(const std::filesystem::path& game_path) {
         if(!SDL_CreateWindowAndRenderer("IOR Engine", 800, 600, SDL_WINDOW_RESIZABLE, &m_window, &m_renderer)) {
-            spdlog::critical("Failed to create window and renderer: %s", SDL_GetError());
+            spdlog::critical("Failed to create window and renderer: {}", SDL_GetError());
             return false;
+        }
+        if (!game_path.empty() && !m_game.load(game_path)) {
+            spdlog::critical("Game load failed: {}", m_game.error());
+            return false;
+        }
+        if (m_game.loaded()) {
+            spdlog::info("Game loaded: {} (hot reload enabled)", game_path.string());
         }
         return true;
     }
@@ -27,13 +35,22 @@ namespace ior_engine {
         if(event.type == SDL_EVENT_KEY_DOWN) {
             if(event.key.key == SDLK_ESCAPE) {
                 spdlog::info("Escape key pressed. Exiting...");
-                SDL_Quit();
-                exit(0);
+                SDL_Event quit{};
+                quit.type = SDL_EVENT_QUIT;
+                SDL_PushEvent(&quit);
             }
         }
     }
 
     void core::update() {
+        if (!m_game.poll()) {
+            if (m_reload_error != m_game.error()) {
+                m_reload_error = m_game.error();
+                spdlog::error("Game reload failed: {}", m_reload_error);
+            }
+        } else if (m_game.error().empty()) {
+            m_reload_error.clear();
+        }
         m_ecs.update();
 
         SDL_SetRenderDrawColor(m_renderer, 20, 20, 35, 255);
@@ -44,13 +61,21 @@ namespace ior_engine {
 
 // SDL3 CALLBACKS
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
+    std::filesystem::path game_path;
+    if (argc == 3 && std::string_view(argv[1]) == "--game") {
+        game_path = argv[2];
+    } else if (argc != 1) {
+        spdlog::error("Usage: ior_engine [--game /absolute/path/to/game3 library]");
+        return SDL_APP_FAILURE;
+    }
     if (!SDL_Init(SDL_INIT_VIDEO)) {
+        spdlog::critical("SDL video initialization failed: {}", SDL_GetError());
         return SDL_APP_FAILURE;
     }
 
     auto core = std::make_unique<ior_engine::core>();
 
-    if (!core->init()) {
+    if (!core->init(game_path)) {
         return SDL_APP_FAILURE;
     }
 
