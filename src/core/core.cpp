@@ -5,20 +5,32 @@
 
 namespace ior_engine {
     core::~core() {
-        if (m_renderer) {
-            SDL_DestroyRenderer(m_renderer);
-        }
+        m_game.unload();
+
+        m_renderer.reset();
+
         if (m_window) {
             SDL_DestroyWindow(m_window);
         }
         
-        spdlog::info("Core destroyed.");
+        spdlog::info("core destroyed.");
     }
 
-    bool core::init() {
-        if(!SDL_CreateWindowAndRenderer("IOR Engine", 800, 600, SDL_WINDOW_RESIZABLE, &m_window, &m_renderer)) {
-            spdlog::critical("Failed to create window and renderer: %s", SDL_GetError());
+    bool core::init(const std::filesystem::path& game_path) {
+        m_window = SDL_CreateWindow("IOR Engine", 800, 600, SDL_WINDOW_RESIZABLE);
+        if(!m_window) {
+            spdlog::critical("failed to create window: {}", SDL_GetError());
             return false;
+        }
+        
+        m_renderer = std::make_unique<renderer>(m_window);
+
+        if (!game_path.empty() && !m_game.load(game_path)) {
+            spdlog::critical("game load failed: {}", m_game.error());
+            return false;
+        }
+        if (m_game.loaded()) {
+            spdlog::info("game loaded: {} (hot reload enabled)", game_path.string());
         }
         return true;
     }
@@ -26,31 +38,49 @@ namespace ior_engine {
     void core::handle_event(const SDL_Event& event) {
         if(event.type == SDL_EVENT_KEY_DOWN) {
             if(event.key.key == SDLK_ESCAPE) {
-                spdlog::info("Escape key pressed. Exiting...");
-                SDL_Quit();
-                exit(0);
+                spdlog::info("escape key pressed. exiting...");
+                SDL_Event quit{};
+                quit.type = SDL_EVENT_QUIT;
+                SDL_PushEvent(&quit);
             }
         }
     }
 
     void core::update() {
+        if (!m_game.poll()) {
+            if (m_reload_error != m_game.error()) {
+                m_reload_error = m_game.error();
+                spdlog::error("game reload failed: {}", m_reload_error);
+            }
+        } else if (m_game.error().empty()) {
+            m_reload_error.clear();
+        }
         m_ecs.update();
 
-        SDL_SetRenderDrawColor(m_renderer, 20, 20, 35, 255);
-        SDL_RenderClear(m_renderer);
-        SDL_RenderPresent(m_renderer);
+        m_renderer->render();
+        // SDL_SetRenderDrawColor(m_renderer, 20, 20, 35, 255);
+        // SDL_RenderClear(m_renderer);
+        // SDL_RenderPresent(m_renderer);
     }
 } // namespace ior_engine
 
 // SDL3 CALLBACKS
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
+    std::filesystem::path game_path;
+    if (argc == 3 && std::string_view(argv[1]) == "--game") {
+        game_path = argv[2];
+    } else if (argc != 1) {
+        spdlog::error("Usage: ior_engine [--game /absolute/path/to/game3 library]");
+        return SDL_APP_FAILURE;
+    }
     if (!SDL_Init(SDL_INIT_VIDEO)) {
+        spdlog::critical("SDL video initialization failed: {}", SDL_GetError());
         return SDL_APP_FAILURE;
     }
 
     auto core = std::make_unique<ior_engine::core>();
 
-    if (!core->init()) {
+    if (!core->init(game_path)) {
         return SDL_APP_FAILURE;
     }
 

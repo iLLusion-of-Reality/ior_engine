@@ -1,4 +1,6 @@
 add_subdirectory(ecs)
+add_subdirectory(renderer)
+add_subdirectory(game)
 add_subdirectory(core)
 
 add_executable(ior_engine)

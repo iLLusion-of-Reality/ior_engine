@@ -7,3 +7,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 add_subdirectory(thirdparty)
 add_subdirectory(src)
+
+include(CTest)
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
